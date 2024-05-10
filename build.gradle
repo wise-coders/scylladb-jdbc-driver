@@ -1,0 +1,144 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+plugins{
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+}
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+apply plugin: 'application'
+apply plugin: 'distribution'
+
+
+repositories {
+    mavenCentral() 
+}
+
+dependencies {
+    implementation 'com.scylladb:java-driver-core:4.17.0.0'
+    implementation 'software.amazon.awssdk:secretsmanager:2.22.9'
+    implementation 'com.instaclustr:cassandra-driver-kerberos:3.0.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
+}
+
+compileJava{
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
+    doFirst {
+        options.compilerArgs = [
+                '--module-path', classpath.asPath,
+        ]
+    }
+}
+
+jar {
+    archiveFileName ="scylladbjdbc${driverVersion}.jar"
+    manifest {
+        attributes 'Main-Class': 'com.wisecoders.dbschema.scylladb.JdbcDriver'
+        attributes 'Class-Path': configurations.runtimeClasspath.files.collect { it.getName() }.join(' ')
+        attributes 'Specification-Version': "$driverVersion"
+        attributes 'Specification-Vendor': "Wise Coders"
+        attributes 'Implementation-Vendor-Id': "dbschema.com"
+        attributes 'Implementation-Vendor': "Wise Coders"
+        attributes 'Implementation-Version': new Date().format( 'yyMMdd' )
+    }
+}
+
+
+task zip(type: Zip, dependsOn:['clean','jar']) {
+    archiveFileName.set 'ScyllaDBJdbcDriver.zip'
+    from configurations.runtimeClasspath.allArtifacts.files
+    from configurations.runtimeClasspath
+    from "build/libs" include "*.jar"
+}
+
+task copyInUserHome(type: Copy,dependsOn:['clean','jar']) {
+    from configurations.runtimeClasspath.allArtifacts.files
+    from configurations.runtimeClasspath
+    from "build/libs" include "*.jar"
+    into "${System.getProperty('user.home')}/.DbSchema/drivers/ScyllaDB/"
+}
+
+
+
+group = "com.wisecoders"
+archivesBaseName = "scylladb-jdbc-drvier"
+version = "2.3.1"
+
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+javadoc {
+    options.addBooleanOption('html5', true)
+}
+artifacts {
+    archives javadocJar, sourcesJar
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'scylladb-jdbc-driver'
+            from components.java
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
+            pom {
+                name = 'ScyllaDB-JDBC-Driver'
+                description = 'Cassandra JDBC Driver'
+                url = 'https://dbschema.com/jdbc-driver/Cassandra.html'
+                properties = [
+                        myProp: "value",
+                        "prop.with.dots": "anotherValue"
+                ]
+                licenses {
+                    license {
+                        name = 'GPL-3Plus dual license. Contributions only to https://github.com/wise-coders/scylladb-jdbc-driver'
+                        url = 'https://github.com/wise-coders/scylladb-jdbc-driver'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'wisecoders'
+                        name = 'Wise Coders GmbH'
+                        email = 'support@wisecoders.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/wise-coders/scylladb-jdbc-driver'
+                    developerConnection = 'scm:git:ssh://github.com/wise-coders/scylladb-jdbc-driver'
+                    url = 'https://github.com/wise-coders/scylladb-jdbc-driver'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "OSSRH"
+            url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            credentials {
+                username = project.properties["sonatypeUsername"]
+                password = project.properties["sonatypePassword"]
+            }
+        }
+    }
+}
+signing {
+    sign publishing.publications.mavenJava
+}
+
+
