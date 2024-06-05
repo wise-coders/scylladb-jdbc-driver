@@ -20,7 +20,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.scylladb:java-driver-core:4.17.0.0'
+    implementation 'com.scylladb:java-driver-core:4.17.0.1'
     implementation 'software.amazon.awssdk:secretsmanager:2.22.9'
     implementation 'com.instaclustr:cassandra-driver-kerberos:3.0.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
